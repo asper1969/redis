@@ -1,0 +1,19 @@
+# VS Code configuration
+.vscode/
+
+# Compiled binaries
+*.o
+*.exe
+server
+client
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Temporary files
+*~
+*.swp
+*.swo
