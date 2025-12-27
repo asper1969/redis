@@ -74,7 +74,47 @@ static int32_t write_all(int fd, const char *buf, size_t n) {
     return 0;
 }
 
-static int32_t one_request() {}
+const size_t k_max_msg = 4096;
+
+static int32_t one_request(int connfd) {
+    // 4 bytes header 
+    char rbuf[4 + k_max_msg];
+    errno = 0;
+    int32_t err = read_full(connfd, rbuf, 4);
+
+    if (err) {
+        msg(errno == 0 ? "EOF" : "read error on header");
+        return err;
+    }
+
+    uint32_t len = 0;
+    memcpy(&len, rbuf, 4); // assume little endian
+
+    if (len > k_max_msg) {
+        msg("message too long");
+        return -1;
+    }
+
+    //request body
+    err = read_full(connfd, &rbuf[4], len);
+
+    if (err) {
+        msg("read error on body");
+        return err;
+    }
+
+    // do something
+    printf("client says: %.*s\n", len, &rbuf[4]);
+    
+    // reply using the same protocol
+    const char reply[] = "world";
+    char wbuf[4 + sizeof(reply)];
+    len = (uint32_t) strlen(reply);
+    memcpy(wbuf, &len, 4); // header
+    memcpy(&wbuf[4], reply, len); // body
+
+    return write_all(connfd, wbuf, 4 + len);
+}
 
 int main() {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -111,7 +151,7 @@ int main() {
 
         // only serves one client connection at once
         while(true) {
-            int32_t err = one_request(confd);
+            int32_t err = one_request(connfd);
 
             if (err) {
                 break;
