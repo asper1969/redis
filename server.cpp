@@ -19,27 +19,6 @@ static void msg(const char* msg) {
     fprintf(stderr, "%s\n", msg);
 }
 
-static void do_something(int confd) {
-    // Placeholder for future functionality
-    char rbuf[64] = {};
-    ssize_t n = read(confd, rbuf, sizeof(rbuf) - 1);
-    
-    if (n < 0) {
-        msg("read() error");
-        return;
-    }
-
-    printf("client says: %s\n", rbuf);
-
-    char wbuf[] = "hello from server\n";
-    ssize_t w = write(confd, wbuf, strlen(wbuf));
-
-    if (w < 0) {
-        msg("write() error");
-        return;
-    }
-}
-
 static int32_t read_full(int fd, char *buf, size_t n) {
 
     while (n > 0) {

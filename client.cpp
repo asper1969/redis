@@ -119,6 +119,18 @@ int main() {
     // multiple requests
     int32_t err = query(fd, "hello");
 
+    if (err) {
+        msg("first query failed");
+        goto L_DONE;
+    }
+
+    err = query(fd, "another hello");
+
+    if (err) {
+        msg("second query failed");
+        goto L_DONE;
+    }
+
 L_DONE:
     close(fd);
     return 0;
