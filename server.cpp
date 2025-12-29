@@ -7,7 +7,28 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/ip.h>
+#include <poll.h>
 #include <assert.h>
+#include <vector>
+
+struct Conn {
+    int fd = -1;
+    // application's intention for the event loop
+    bool want_read = false;
+    bool want_write = false;
+    bool want_close = false;
+    // buffered input/output data
+    std::vector<uint8_t> incoming; // data to be parsed by the application
+    std::vector<uint8_t> outgoing; // data to be sent to the peer
+};
+
+int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+
+struct pollfd {
+    int   fd;         /* file descriptor */
+    short events;    /* requested events: want to read, write or both */
+    short revents;   /* returned events: can read? can write? */
+};
 
 static void die(const char* msg) {
     int err = errno;
