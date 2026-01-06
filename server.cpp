@@ -171,44 +171,37 @@ enum {
     RES_NX = 2, // key not found
 };
 
-// +--------+---------+
-// | status | data... |
-// +--------+---------+
-struct Response {
-    uint32_t status;
-    std::vector<uint8_t> data;
-};
-
 // placeholder; TODO: implement later
 static std::map<std::string, std::string> g_data;
 
-static void do_request(std::vector<std::string> &cmd, Response &out) {
+static void do_request(std::vector<std::string> &cmd, std::vector<uint8_t> &out) {
+    uint32_t status = RES_OK;
+    const std::string *data_ptr = nullptr;
 
     if (cmd.size() == 2 && cmd[0] == "get") {
         auto it = g_data.find(cmd[1]);
 
         if (it == g_data.end()) {
-            out.status = RES_NX; // key not found
-            return;
-        } 
-
-        const std::string &val = it->second;
-        out.data.assign(val.begin(), val.end());
+            status = RES_NX; // key not found
+        } else {
+            data_ptr = &it->second;
+        }
     } else if (cmd.size() == 3 && cmd[0] == "set") {
         g_data[cmd[1]].swap(cmd[2]);
-        out.status = RES_OK;
     } else if (cmd.size() == 2 && cmd[0] == "del") {
         g_data.erase(cmd[1]);
     } else {
-        out.status = RES_ERR; // unknown command
+        status = RES_ERR; // unknown command
     }
-}
 
-static void make_response(const Response &resp, std::vector<uint8_t> &out) {
-    uint32_t resp_len = 4 + (uint32_t)resp.data.size();
+    // write response directly to output buffer
+    uint32_t data_len = data_ptr ? (uint32_t)data_ptr->size() : 0;
+    uint32_t resp_len = 4 + data_len;
     buf_append(out, (const uint8_t*)&resp_len, 4); // header
-    buf_append(out, (const uint8_t*)&resp.status, 4); // status
-    buf_append(out, resp.data.data(), resp.data.size()); // data
+    buf_append(out, (const uint8_t*)&status, 4); // status
+    if (data_ptr) {
+        buf_append(out, (const uint8_t*)data_ptr->data(), data_ptr->size()); // data
+    }
 }
 
 // process one request from the client connection if there is enough data
@@ -242,9 +235,7 @@ static bool try_one_request(Conn *conn) {
         return false; // will close the connection
     }
 
-    Response resp;
-    do_request(cmd, resp);
-    make_response(resp, conn->outgoing);
+    do_request(cmd, conn->outgoing);
 
     // application logic done! remove the request message
     buf_consume(conn->incoming, 4 + len);
